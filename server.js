@@ -1,30 +1,26 @@
-
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const { Server } = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new Server(server);
 
-app.use(express.static('public'));
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 io.on('connection', (socket) => {
-    console.log('A user connected');
-
-    socket.on('playerMove', (data) => {
-        socket.broadcast.emit('playerMove', data);
-    });
-
-    socket.on('playerShoot', (data) => {
-        socket.broadcast.emit('playerShoot', data);
-    });
+    console.log('A user connected:', socket.id);
 
     socket.on('disconnect', () => {
-        console.log('A user disconnected');
+        console.log('User disconnected:', socket.id);
     });
+
+    // Handle other events here
 });
 
-server.listen(3000, () => {
-    console.log('Server is running on port 3000');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
