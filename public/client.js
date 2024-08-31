@@ -1,5 +1,5 @@
 
-const socket = io();
+const socket = io('https://soldfor61cemts-github-io.onrender.com/');
 let myId;
 const players = {};
 
