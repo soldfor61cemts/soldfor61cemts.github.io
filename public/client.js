@@ -1,8 +1,49 @@
 
-const socket = io('https://soldfor61cemts-github-io.onrender.com/');
+const socket = io();
 let myId;
 const players = {};
 
+let scene, camera, renderer;
+let playerObjects = {};
+let bullets = [];
+
+// Initialize Three.js scene
+function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    // Position camera
+    camera.position.z = 5;
+
+    // Add stars for space visualization
+    addStars();
+
+    animate();
+}
+
+// Add stars to the background
+function addStars() {
+    for (let i = 0; i < 1000; i++) {
+        const geometry = new THREE.SphereGeometry(0.1, 24, 24);
+        const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const star = new THREE.Mesh(geometry, material);
+
+        const [x, y, z] = Array(3).fill().map(() => THREE.MathUtils.randFloatSpread(200));
+        star.position.set(x, y, z);
+        scene.add(star);
+    }
+}
+
+// Animate the scene
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+}
+
+// Socket events
 socket.on('initialize', (data) => {
     myId = data.id;
     Object.keys(data.players).forEach((id) => {
@@ -33,15 +74,25 @@ socket.on('playerDisconnected', (data) => {
 });
 
 function createPlayer(id, position) {
-    players[id] = { element: createBoxElement(), position };
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const player = new THREE.Mesh(geometry, material);
+    player.position.set(position.x, position.y, position.z);
+    scene.add(player);
+    playerObjects[id] = player;
+    players[id] = { position };
 }
 
 function updatePlayerPosition(id, position) {
     players[id].position = position;
-    updateBoxElement(players[id].element, position);
+    if (playerObjects[id]) {
+        playerObjects[id].position.set(position.x, position.y, position.z);
+    }
 }
 
 function removePlayer(id) {
+    scene.remove(playerObjects[id]);
+    delete playerObjects[id];
     delete players[id];
 }
 
@@ -55,14 +106,13 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
-function createBoxElement() {
-    // Create 3D box element using Three.js
-}
-
 function createBullet(id, bullet) {
-    // Render bullet in the game space
+    const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const bulletMesh = new THREE.Mesh(geometry, material);
+    bulletMesh.position.set(bullet.x, bullet.y, bullet.z);
+    scene.add(bulletMesh);
+    bullets.push(bulletMesh);
 }
 
-function updateBoxElement(element, position) {
-    // Update 3D element's position in the scene
-}
+init();
