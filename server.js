@@ -1,3 +1,4 @@
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -7,34 +8,38 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-const players = {}; // Object to keep track of players
+const players = {};
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
-    players[socket.id] = { x: 0, y: 0, z: 0 }; // Initial position for each player
+    players[socket.id] = { x: 0, y: 0, z: 0, bullets: [] };
 
-    // Send the new player their ID and the list of current players
     socket.emit('initialize', { id: socket.id, players });
 
-    // Notify other players about the new player
     socket.broadcast.emit('newPlayer', { id: socket.id });
 
     socket.on('move', (data) => {
-        // Update the position of the player who moved
         if (players[socket.id]) {
-            players[socket.id] = data.position;
-            // Broadcast the updated position to all other players
-            socket.broadcast.emit('playerMoved', { id: socket.id, position: data.position });
+            players[socket.id].x = data.position.x;
+            players[socket.id].y = data.position.y;
+            players[socket.id].z = data.position.z;
+            io.emit('playerMoved', { id: socket.id, position: data.position });
+        }
+    });
+
+    socket.on('shoot', (data) => {
+        if (players[socket.id]) {
+            const bullet = { x: data.position.x, y: data.position.y, z: data.position.z };
+            players[socket.id].bullets.push(bullet);
+            io.emit('playerShot', { id: socket.id, bullet });
         }
     });
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
-        delete players[socket.id]; // Remove from the players object
-        // Notify all players that someone disconnected
+        delete players[socket.id];
         socket.broadcast.emit('playerDisconnected', { id: socket.id });
     });
 });
